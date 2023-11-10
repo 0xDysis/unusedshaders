@@ -1,0 +1,30 @@
+precision highp float;
+uniform vec2 iResolution;
+uniform float iTime;
+
+void main() {
+    vec2 fragCoord = gl_FragCoord.xy;
+    vec4 fragColor;
+
+    float s = 0.0, v = 0.0;
+    vec2 uv = (fragCoord / iResolution.xy) * 2.0 - 1.;
+    float time = (iTime-6.0)*50.0;
+    vec3 col = vec3(-0.1);
+    vec3 init = vec3(sin(time * .0032)*.3, .35 - tan(time * .005)*.3, time * 0.0002);
+    for (int r = 0; r < 60; r++) 
+    {
+        vec3 p = init + s * vec3(uv, 0.00005);
+        p.z = exp(p.z)- tan(s);
+        for (int i=0; i < 5; i++) p = (sin(abs(p * 2.04))) / dot(p, p) - 0.7 - (s);
+        v += pow(dot(p, p), .8) * 0.03;
+        col +=  abs(vec3(v * 0.2+0.4, 12.-s*2., 1.9 + v * 1.) * v * 0.00006);
+        s += .02;
+    }
+
+   // float grayscale = dot(col, vec3(0.3, 0.59, 0.11));
+   // col = vec3(grayscale);
+
+    fragColor = vec4(clamp(col, .0, 1.0), 1.0);
+
+    gl_FragColor = tan(fragColor);
+}
