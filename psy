@@ -1,0 +1,88 @@
+// Permutation table
+const vec3 perm = vec3(151, 160, 137);
+
+// Hash function
+float hash(float x)
+{
+    return fract(sin(x) * 43758.5453123);
+}
+
+// 2D Perlin Noise function
+float perlin(vec2 p)
+{
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+
+    float a = hash(i.x + perm.x * i.y);
+    float b = hash(i.x + 1.0 + perm.x * i.y);
+    float c = hash(i.x + perm.x * (i.y + 1.0));
+    float d = hash(i.x + 1.0 + perm.x * (i.y + 1.0));
+
+    return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+}
+
+vec3 getColor(float value, float paletteIndex)
+{
+    // Define multiple color palettes
+    vec3 color1 = vec3(0.0, 0.5, 1.0);
+    vec3 color2 = vec3(1.0, 0.5, 0.0);
+    vec3 color3 = vec3(0.0, 1.0, 0.5);
+    vec3 color4 = vec3(1.0, 0.0, 0.5);
+    vec3 color5 = vec3(0.5, 1.0, 0.0);
+
+    // Interpolate between the colors based on the value and paletteIndex
+    vec3 color = mix(color1, color2, value);
+    color = mix(color, color3, value * value);
+    color = mix(color, color4, value * paletteIndex);
+    color = mix(color, color5, value * value * sin(paletteIndex));
+
+    return color;
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord)
+{
+    // Normalized pixel coordinates (from 0 to 1)
+    vec2 uv = fragCoord / iResolution.xy;
+
+    // Initialize the noise value
+    float noise = 0.0;
+
+    // Iterate 100 times for the outer loop
+    for (int i = 0; i < 10; i++)
+    {
+        // Initialize the amplitude and frequency
+        float amplitude = 0.5;
+        float frequency = 1.0;
+
+        // Iterate 10 times for the inner loop
+        for (int j = 0; j < 4; j++)
+        {
+            // Modulate the amplitude and frequency using sine functions
+            float modAmplitude = amplitude * (0.9 * 0.5 * sin(iTime + float(i) * 0.1));
+            float modFrequency = frequency * (1.0 - 0.5 * sin(iTime * 0.5 + float(i) * 0.2));
+            
+
+            // Add the current layer of Perlin Noise
+           noise += tan(modAmplitude) * perlin(uv + sin(modFrequency) + vec2(iTime));
+
+            // Update the amplitude and frequency for the next iteration
+            amplitude *= 0.01;
+            frequency *= 3.;
+            // Additional operation for amplitude and frequency
+            amplitude += 0.00001; // You can replace this with your desired operation
+            frequency += 0.02; // You can replace this with your desired operation
+        }
+        
+        noise = noise * 1.2;
+    }
+
+    // Normalize the noise value to the range [0, 1]
+    noise = (noise + 1.0) / 2.0;
+
+    // Get the color based on the noise value and the outer loop index
+    vec3 color = getColor(noise, float(90) / 30.0);
+
+    // Output to screen
+    fragColor = tan(tan(vec4(cos(color), cos(3.14))));
+}
