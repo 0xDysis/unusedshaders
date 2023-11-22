@@ -1,0 +1,91 @@
+precision highp float;
+
+float gTime = 0.;
+const float REPEAT = 5.0;
+
+// Rotation matrix
+mat2 rot(float a) {
+    float c = cos(a), s = sin(a);
+    return mat2(c,s,-s,c);
+}
+
+float sdBox(vec3 p, vec3 b) {
+    vec3 q = abs(p) - b;
+    return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+}
+
+float sdSphere(vec3 p, float r) {
+    return length(p) - r;
+}
+
+float unionOp(float d1, float d2) {
+    return min(d1, d2);
+}
+
+float scene(vec3 pos, float scale) {
+    pos *= scale;
+    float boxDist = sdBox(pos, vec3(.4, .4, .1)) + 1.5;
+    float sphereDist = sdSphere(pos, 0.5);
+    return unionOp(boxDist, sphereDist);
+}
+
+float pattern(vec3 pos, float iTime) {
+    vec3 pos_origin = pos;
+    pos = pos_origin;
+    pos.y += sin(gTime * 0.4) * 2.5;
+    pos.xy *= rot(.8);
+    float shape1 = scene(pos, 2. - abs(sin(gTime * 0.4)) * 1.5);
+    pos = pos_origin;
+    pos.y -= sin(gTime * 0.4) * 2.5;
+    pos.xy *= rot(.8);
+    float shape2 = scene(pos, 2. - abs(sin(gTime * 0.4)) * 1.5);
+    pos = pos_origin;
+    pos.x += sin(gTime * 0.4) * 2.5;
+    pos.xy *= rot(.8);
+    float shape3 = scene(pos, 2. - abs(sin(gTime * 0.4)) * 1.5);
+    pos = pos_origin;
+    pos.x -= sin(gTime * 0.4) * 2.5;
+    pos.xy *= rot(.8);
+    float shape4 = scene(pos, 2. - abs(sin(gTime * 0.4)) * 1.5);
+    pos = pos_origin;
+    pos.xy *= rot(.8);
+    float shape5 = scene(pos, .5) * 6.;
+    pos = pos_origin;
+    float shape6 = scene(pos, .5) * 6.;
+    float result = max(max(max(max(max(shape1, shape2), shape3), shape4), shape5), shape6);
+    return sin(result);
+}
+
+float map(vec3 pos, float iTime) {
+    vec3 pos_origin = pos;
+    float pattern1 = pattern(pos, iTime);
+    return pattern1;
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 p = (fragCoord.xy * 2. - iResolution.xy) / min(iResolution.x, iResolution.y);
+    vec3 ro = vec3(0., -0.2, iTime * 2.);
+    vec3 ray = normalize(vec3(p, 1.5));
+    ray.xy = ray.xy * rot(sin(iTime * .03) * 5.);
+    ray.yz = ray.yz * rot(sin(iTime * .05) * .2);
+    float t = 0.1;
+    vec3 col = vec3(0.);
+    float ac = 0.0;
+
+    for (int i = 0; i < 100; i++) {
+        vec3 pos = (ro) - sin(ray) * (t * 1.);
+        pos = mod(pos - 2., 4.) - 2.;
+        gTime = iTime - float(i) * 0.1;
+
+        float d = map(pos, iTime);
+
+        d = max(exp(d), 0.01);
+        ac += sin(-d * 20.);
+
+        t += d * 0.2;
+    }
+
+    col = vec3(ac * 0.02);
+    col += vec3(0., 0.2 * abs(sin(iTime)), 0.5 + sin(iTime) * 0.2);
+    fragColor = vec4(col, 1.0 - t * (0.02 + 0.02 - sin(iTime)));
+}
