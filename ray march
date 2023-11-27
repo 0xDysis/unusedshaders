@@ -4,7 +4,26 @@ const float MIN_DISTANCE = 0.001;
 
 // Sphere function
 float sphere(vec3 position, float radius) {
+    // Apply rotation
+    float angle = iTime; // Rotate over time
+    float cosAngle = cos(angle);
+    float sinAngle = sin(angle);
+    mat3 rotationMatrix = mat3(
+        cosAngle, 0.0, sinAngle,
+        0.0, 1.0, 0.0,
+        -sinAngle, 0.0, cosAngle
+    );
+    position = rotationMatrix * position;
+
     return length(position) - radius;
+}
+float cube(vec3 position, float size) {
+    vec3 d = abs(position) - vec3(size);
+    return min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
+}
+float slerp(float a, float b, float t) {
+    float theta = acos(a*b);
+    return sin((1.0-t)*theta) / sin(theta) * a + sin(t*theta) / sin(theta) * b;
 }
 
 // Normal calculation function
@@ -30,7 +49,23 @@ vec2 raymarch(vec3 origin, vec3 direction) {
     int steps;
     for (steps = 0; steps < MAX_STEPS; ++steps) {
         vec3 position = origin + direction * totalDistance;
-        float distance = sphere(position, 1.0);
+
+        // Apply rotation
+        float angle = iTime; // Rotate over time
+        float cosAngle = cos(angle);
+        float sinAngle = sin(angle);
+        mat3 rotationMatrix = mat3(
+            cosAngle, 0.0, sinAngle,
+            0.0, 1.0, 0.0,
+            -sinAngle, 0.0, cosAngle
+        );
+        position = rotationMatrix * position;
+
+        float sphereDistance = sphere(position, 1.0);
+        float cubeDistance = cube(position, 1.0);
+        float t = (sin(iTime) + 1.0) / 2.0; // Varies between 0 and 1 over time
+        float distance = mix(sphereDistance, cubeDistance, t); // Use mix function instead of slerp
+
         totalDistance += distance;
         if (distance < MIN_DISTANCE) {
             break;
@@ -57,9 +92,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float distance = result.x;
     float steps = result.y;
 
-    vec3 position = cameraPosition + cameraDirection * distance;
-    vec3 normal = calculateNormal(position);
-    vec3 color = calculateLighting(position, normal);
-
-    fragColor = vec4(color, 1.0);
+    if (steps < float(MAX_STEPS)) {
+        vec3 position = cameraPosition + cameraDirection * distance;
+        vec3 normal = calculateNormal(position);
+        vec3 color = calculateLighting(position, normal);
+        fragColor = vec4(color, 1.0);
+    } else {
+        fragColor = vec4(1.0); // Set the background color to white
+    }
 }
