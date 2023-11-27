@@ -7,6 +7,23 @@ float sphere(vec3 position, float radius) {
     return length(position) - radius;
 }
 
+// Normal calculation function
+vec3 calculateNormal(vec3 position) {
+    float delta = 0.001;
+    vec2 h = vec2(delta, 0);
+    float gradientX = sphere(position + h.xyy, 1.0) - sphere(position - h.xyy, 1.0);
+    float gradientY = sphere(position + h.yxy, 1.0) - sphere(position - h.yxy, 1.0);
+    float gradientZ = sphere(position + h.yyx, 1.0) - sphere(position - h.yyx, 1.0);
+    return normalize(vec3(gradientX, gradientY, gradientZ));
+}
+
+// Lighting calculation function
+vec3 calculateLighting(vec3 position, vec3 normal) {
+    vec3 lightDirection = normalize(vec3(1.0, 1.0, 1.0)); // Light coming from the top right
+    float diffuse = max(dot(lightDirection, normal), 0.0);
+    return vec3(diffuse);
+}
+
 // Raymarching function
 vec2 raymarch(vec3 origin, vec3 direction) {
     float totalDistance = 0.0;
@@ -39,8 +56,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 result = raymarch(cameraPosition, cameraDirection);
     float distance = result.x;
     float steps = result.y;
-    
-    vec3 color = vec3(steps) / float(MAX_STEPS); // Visualize the raymarching steps
+
+    vec3 position = cameraPosition + cameraDirection * distance;
+    vec3 normal = calculateNormal(position);
+    vec3 color = calculateLighting(position, normal);
 
     fragColor = vec4(color, 1.0);
 }
